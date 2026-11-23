@@ -1,12 +1,12 @@
 // @name Retro Bowl College NIL + Transfer Admissions
 // @description Converts the native Scholarship Fund into the NIL budget and expands native admissions with transfer candidates.
-// @version 0.6.0
+// @version 0.6.1
 (function () {
     "use strict";
     if (window.__RBNIL_LOADED__) return;
     window.__RBNIL_LOADED__ = true;
 
-    const M = window.RBNIL = { version: "0.6.0", game: null, caller: null, inProfileDraw: false, economyVersion: 0, positionFilterIndex: 0, draftInstanceId: null, draftFilterButton: null, draftInst: null };
+    const M = window.RBNIL = { version: "0.6.1", game: null, caller: null, inProfileDraw: false, economyVersion: 0, positionFilterIndex: 0, draftInstanceId: null, draftFilterButton: null, draftInst: null };
     const POSITIONS = [1,2,3,4,5,6,7,8,9,10];
     const POSITION_FILTERS = [
         { label:"ALL POS", positions:null },
@@ -342,80 +342,155 @@
         }
         return players;
     }
-    function rbNilPositionDropdownChange(event) {
-        const value=Number(event.target.value);
-        M.positionFilterIndex=clamp(value,0,POSITION_FILTERS.length-1);
+    function rbNilSetPositionFilter(index) {
+        M.positionFilterIndex=clamp(Number(index)||0,0,POSITION_FILTERS.length-1);
+        const value=document.getElementById("rbnil-position-filter-value");
+        if(value)value.textContent=POSITION_FILTERS[M.positionFilterIndex].label;
+        const menu=document.getElementById("rbnil-position-filter-menu");
+        const trigger=document.getElementById("rbnil-position-filter-trigger");
+        if(menu)menu.style.display="none";
+        if(trigger)trigger.setAttribute("aria-expanded","false");
         if(M.draftInst) {
             M.draftInst.gmldraft_page=1;
             window.gml_Script_s_update_draft_page(M.draftInst,M.caller);
         }
     }
     function rbNilPositionDropdown() {
-        let select=document.getElementById("rbnil-position-filter");
-        if(select)return select;
+        let root=document.getElementById("rbnil-position-filter-wrap");
+        if(root)return root;
 
         const canvas=document.getElementById("canvas");
         if(!canvas)return null;
-        const wrap=document.createElement("div");
-        wrap.id="rbnil-position-filter-wrap";
-        wrap.style.cssText=[
-            "position:fixed","z-index:2147483000","display:flex","align-items:center",
-            "gap:7px","padding:6px 8px","background:rgba(18,20,18,.94)",
-            "border:2px solid #d6c69a","border-radius:4px",
-            "box-shadow:0 2px 8px rgba(0,0,0,.55)","font: bold 12px Arial,sans-serif",
-            "color:#f4e7c3","pointer-events:auto"
+        root=document.createElement("div");
+        root.id="rbnil-position-filter-wrap";
+        root.style.cssText=[
+            "position:fixed","z-index:2147483000","display:flex","flex-direction:column",
+            "align-items:stretch","gap:4px","width:154px","padding:7px",
+            "background:#263b30","border:2px solid #e5d6a7","border-radius:2px",
+            "box-shadow:3px 3px 0 rgba(0,0,0,.65),inset 0 0 0 1px #71866b",
+            "font-family:'Trebuchet MS',Arial,sans-serif","pointer-events:auto",
+            "box-sizing:border-box"
         ].join(";");
 
-        const label=document.createElement("label");
-        label.htmlFor="rbnil-position-filter";
-        label.textContent="POSITION";
-        label.style.cssText="color:#f4e7c3;letter-spacing:.5px;white-space:nowrap";
-
-        select=document.createElement("select");
-        select.id="rbnil-position-filter";
-        select.setAttribute("aria-label","Filter admissions by position");
-        select.style.cssText=[
-            "min-width:105px","padding:5px 24px 5px 8px",
-            "border:1px solid #d6c69a","border-radius:3px",
-            "background:#f2ead6","color:#20251e",
-            "font:bold 13px Arial,sans-serif","cursor:pointer",
-            "pointer-events:auto"
+        const label=document.createElement("div");
+        label.textContent="FILTER BY POSITION";
+        label.style.cssText=[
+            "color:#e5d6a7","font-size:10px","font-weight:900",
+            "letter-spacing:1px","line-height:13px","text-align:left",
+            "text-shadow:1px 1px #111"
         ].join(";");
+
+        const trigger=document.createElement("button");
+        trigger.type="button";
+        trigger.id="rbnil-position-filter-trigger";
+        trigger.setAttribute("aria-haspopup","listbox");
+        trigger.setAttribute("aria-expanded","false");
+        trigger.style.cssText=[
+            "display:flex","align-items:center","justify-content:space-between",
+            "width:100%","min-height:31px","padding:5px 8px",
+            "border:2px solid #e5d6a7","border-radius:1px",
+            "background:#405b43","color:#fff1c9",
+            "font:900 13px 'Trebuchet MS',Arial,sans-serif",
+            "letter-spacing:.5px","text-align:left","text-shadow:1px 1px #17251b",
+            "cursor:pointer","box-shadow:inset 0 -2px rgba(0,0,0,.2)"
+        ].join(";");
+        const value=document.createElement("span");
+        value.id="rbnil-position-filter-value";
+        value.textContent=POSITION_FILTERS[M.positionFilterIndex||0].label;
+        const arrow=document.createElement("span");
+        arrow.textContent="▼";
+        arrow.style.cssText="color:#f2d77d;font-size:10px;margin-left:8px";
+        trigger.appendChild(value);
+        trigger.appendChild(arrow);
+
+        const menu=document.createElement("div");
+        menu.id="rbnil-position-filter-menu";
+        menu.setAttribute("role","listbox");
+        menu.style.cssText=[
+            "display:none","position:absolute","top:calc(100% + 4px)",
+            "left:7px","right:7px","padding:3px",
+            "background:#263b30","border:2px solid #e5d6a7",
+            "box-shadow:3px 3px 0 rgba(0,0,0,.65)",
+            "max-height:260px","overflow-y:auto"
+        ].join(";");
+
         POSITION_FILTERS.forEach((filter,index)=>{
-            const option=document.createElement("option");
-            option.value=String(index);
+            const option=document.createElement("button");
+            option.type="button";
             option.textContent=filter.label;
-            select.appendChild(option);
+            option.setAttribute("role","option");
+            option.style.cssText=[
+                "display:block","width:100%","padding:6px 8px",
+                "border:0","border-bottom:1px solid rgba(229,214,167,.22)",
+                "background:"+(index===(M.positionFilterIndex||0)?"#d8c477":"transparent"),
+                "color:"+(index===(M.positionFilterIndex||0)?"#263b30":"#f4e9c9"),
+                "font:900 12px 'Trebuchet MS',Arial,sans-serif",
+                "letter-spacing:.6px","text-align:left","cursor:pointer"
+            ].join(";");
+            option.addEventListener("mouseenter",()=>{
+                if(index!==(M.positionFilterIndex||0))option.style.background="#405b43";
+                if(index!==(M.positionFilterIndex||0))option.style.color="#fff1c9";
+            });
+            option.addEventListener("mouseleave",()=>{
+                option.style.background=index===(M.positionFilterIndex||0)?"#d8c477":"transparent";
+                option.style.color=index===(M.positionFilterIndex||0)?"#263b30":"#f4e9c9";
+            });
+            option.addEventListener("click",()=>rbNilSetPositionFilter(index));
+            menu.appendChild(option);
         });
-        select.value=String(M.positionFilterIndex||0);
-        select.addEventListener("change",rbNilPositionDropdownChange);
-        wrap.appendChild(label);
-        wrap.appendChild(select);
-        document.body.appendChild(wrap);
+
+        trigger.addEventListener("click",()=>{
+            const open=menu.style.display!=="block";
+            menu.style.display=open?"block":"none";
+            trigger.setAttribute("aria-expanded",open?"true":"false");
+        });
+        root.appendChild(label);
+        root.appendChild(trigger);
+        root.appendChild(menu);
+        document.body.appendChild(root);
 
         const place=()=>{
             const rect=canvas.getBoundingClientRect();
-            wrap.style.top=Math.max(4,rect.top+8)+"px";
-            wrap.style.left=Math.max(4,rect.right-wrap.offsetWidth-12)+"px";
+            root.style.top=Math.max(4,rect.top+8)+"px";
+            root.style.left=Math.max(4,rect.right-root.offsetWidth-12)+"px";
         };
         place();
         window.addEventListener("resize",place);
         window.addEventListener("scroll",place,true);
-        return select;
+        document.addEventListener("pointerdown",event=>{
+            if(!root.contains(event.target)) {
+                menu.style.display="none";
+                trigger.setAttribute("aria-expanded","false");
+            }
+        });
+        document.addEventListener("keydown",event=>{
+            if(event.key==="Escape") {
+                menu.style.display="none";
+                trigger.setAttribute("aria-expanded","false");
+            }
+        });
+        return root;
     }
     function rbNilEnsurePositionDropdown(draft) {
         M.draftInstanceId=draft.id;
         M.draftInst=draft;
-        // Clean up the experimental in-game button from v0.5.9 if this session
-        // hot-reloads the mod without refreshing the page.
         if(M.draftFilterButton) {
             try { if(instance_exists(M.draftFilterButton))instance_destroy(M.draftFilterButton); } catch(_) {}
             M.draftFilterButton=null;
         }
-        const select=rbNilPositionDropdown();
-        const wrap=document.getElementById("rbnil-position-filter-wrap");
-        if(wrap)wrap.style.display="flex";
-        if(select)select.value=String(M.positionFilterIndex||0);
+        const root=rbNilPositionDropdown();
+        const value=document.getElementById("rbnil-position-filter-value");
+        const menu=document.getElementById("rbnil-position-filter-menu");
+        if(root)root.style.display="flex";
+        if(value)value.textContent=POSITION_FILTERS[M.positionFilterIndex||0].label;
+        if(menu) {
+            const options=menu.querySelectorAll("button");
+            options.forEach((option,index)=>{
+                const active=index===(M.positionFilterIndex||0);
+                option.style.background=active?"#d8c477":"transparent";
+                option.style.color=active?"#263b30":"#f4e9c9";
+            });
+        }
     }
     function rbNilHidePositionDropdown() {
         const wrap=document.getElementById("rbnil-position-filter-wrap");
@@ -457,8 +532,8 @@
         yyInst(draft,other,100063).visible=true;
         if(game.gmldraft_page===1) yyInst(draft,other,100062).visible=false;
         if(game.gmldraft_page===draft.gmlpage_max) yyInst(draft,other,100063).visible=false;
-        const filterSelect=document.getElementById("rbnil-position-filter");
-        if(filterSelect)filterSelect.value=String(M.positionFilterIndex||0);
+        const filterValue=document.getElementById("rbnil-position-filter-value");
+        if(filterValue)filterValue.textContent=POSITION_FILTERS[M.positionFilterIndex||0].label;
     }
     wrap("gml_Script_s_update_draft_page",original=>function(inst,other) {
         setContext(inst,other);
@@ -516,5 +591,5 @@
         return result;
     });
 
-    log("Loaded native Scholarship Fund NIL conversion v"+M.version+"; HTML position dropdown admissions filter, native $1K NIL units, cap, upgrades, affordability and deductions are active");
+    log("Loaded native Scholarship Fund NIL conversion v"+M.version+"; native-style HTML position dropdown admissions filter, native $1K NIL units, cap, upgrades, affordability and deductions are active");
 })();
