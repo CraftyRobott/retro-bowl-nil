@@ -63,9 +63,25 @@
         return game ? Math.round(schoolBaseBudget(game,caller)*1000)+(Number(game.gmlboost_recruitment_credits_cap)||0) : 10000;
     }
     function ensureNativeCapBinding(game=M.game) {
-        if(!game||typeof window.__yy_method!=="function"||typeof window.gml_Script_recruitment_credits_cap_total!=="function")return;
-        try { game.gmlrecruitment_credits_cap_total=window.__yy_method(game,window.gml_Script_recruitment_credits_cap_total); }
-        catch(e) { warn("Could not refresh native Scholarship Fund cap binding",e); }
+        if(!game||typeof window.__yy_method!=="function")return;
+        // GameMaker binds these scripts onto the game instance during its global init.
+        // Rebind them after the mod wraps the global functions, otherwise the instance
+        // keeps calling stale native implementations (including the old +30K upgrade).
+        const bindings = {
+            gmlrecruitment_credits_cap_total:"gml_Script_recruitment_credits_cap_total",
+            gmlcan_fit_recruitment_credits:"gml_Script_can_fit_recruitment_credits",
+            gmlrecruitment_credits_space:"gml_Script_recruitment_credits_space",
+            gmlrecruitment_credits_add:"gml_Script_recruitment_credits_add",
+            gmlrecruitment_credits_toggle_roster_size:"gml_Script_recruitment_credits_toggle_roster_size",
+            gmlrecruitment_credits_button_click_boost:"gml_Script_recruitment_credits_button_click_boost",
+            gmlbtn_response_boost_recruitment_credits:"gml_Script_btn_response_boost_recruitment_credits"
+        };
+        try {
+            for(const method in bindings) {
+                const script=window[bindings[method]];
+                if(typeof script==="function")game[method]=window.__yy_method(game,script);
+            }
+        } catch(e) { warn("Could not refresh native Scholarship Fund method bindings",e); }
     }
 
     function priceCandidate(player) {
