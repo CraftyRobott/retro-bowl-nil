@@ -281,6 +281,8 @@
         if (college() && Number(M.game.gmlweek) === 1 && Number(M.game.gmlcollege_admissions_draft_round) > 0) {
             if (!M.cap || M.year !== Number(M.game.gmlyear)) resetBudget();
             if (!M.generated || M.year !== Number(M.game.gmlyear)) generateInitial();
+            // Consume the stock admissions trigger so it does not reopen/rebuild every step.
+            M.game.gmlcollege_admissions_draft_round = 0;
             open();
             return true;
         }
