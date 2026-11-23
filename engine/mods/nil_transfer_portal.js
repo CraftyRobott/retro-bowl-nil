@@ -1,13 +1,13 @@
 // @name Retro Bowl College NIL + Transfer Admissions
 // @description Uses the native college admissions screen as an expanded transfer portal with annual NIL offers.
-// @version 0.3.0
+// @version 0.3.1
 (function () {
     "use strict";
     if (window.__RBNIL_LOADED__) return;
     window.__RBNIL_LOADED__ = true;
 
     const M = window.RBNIL = {
-        version: "0.3.0",
+        version: "0.3.1",
         game: null,
         caller: null,
         year: -1,
@@ -282,7 +282,15 @@
             const player = inst.gmlpmap;
             if (player && Number(get(player, "rbnil_candidate")) === 1 && isCollege()) {
                 const label = yyInst(inst, other, 100448);
-                label.gmltext = "NIL OFFER: " + money(get(player, "rbnil_value")) + "/YR  |  AVAILABLE: " + money(M.budget);
+                // The native VALUE row is the always-visible profile field (100447).
+                // Replace its unrelated trade valuation with the NIL offer for portal candidates.
+                const valueLabel = yyInst(inst, other, 100447);
+                valueLabel.gmltext = "NIL VALUE: " + money(get(player, "rbnil_value")) + "/YR";
+                valueLabel.visible = true;
+                valueLabel.gmltcolour = global.gmlc_primary;
+
+                // Keep the secondary row for the remaining annual NIL budget.
+                label.gmltext = "AVAILABLE: " + money(M.budget);
                 label.visible = true;
                 label.gmltcolour = global.gmlc_primary;
             }
