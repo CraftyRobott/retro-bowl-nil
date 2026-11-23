@@ -98,9 +98,14 @@
             M.caller = other;
             M.game = main() || inst;
             if (!college()) return;
-            // Use the game's own text and button objects so the office controls
-            // inherit native fonts, focus animation, touch, and gamepad behavior.
-            const label = instance_create_layer(365, 177, "Instances", YYASSET_REF(0x0000004b));
+            if (M.officeButton && instance_exists(M.officeButton)) {
+                updateOfficeDisplay();
+                return;
+            }
+
+            // The college Front Office room is 480x270. These coordinates
+            // place the NIL panel in the open right-hand column above staff cards.
+            const label = instance_create_layer(360, 67, "Instances", YYASSET_REF(0x0000004b));
             label.gmltext = "NIL AVAILABLE: " + cash(M.budget);
             label.gmldraw_box = false;
             label.gmlhalign = 1;
@@ -110,21 +115,18 @@
             label.gmlshadow = true;
             M.officeLabel = label;
 
-            const button = instance_create_layer(300, 193, "Instances", YYASSET_REF(0x00000014));
+            const button = instance_create_layer(360, 91, "Instances", YYASSET_REF(0x00000014));
             button.gmltext = "TRANSFER PORTAL";
             button.gmlbtn_image = YYASSET_REF(0x01000069);
             button.sprite_index = YYASSET_REF(0x01000069);
             button.image_xscale = 1.9393;
             button.gmlactive = true;
-            button.gmlgp_mapped_button = 32773;
-            button.gmlonClickAction = function (buttonInst, buttonOther) {
-                M.caller = buttonOther;
-                M.game = main() || buttonInst;
-                open();
-            };
+            button.gmlonClickAction = kgml_Script_btn_click_Boost_Salary_Cap;
+            button.gmlrbnil_portal_button = true;
             M.officeButton = button;
+            log("Athletics Office NIL controls added", { label: label.id, button: button.id });
         } catch (e) {
-            console.warn("[RB NIL] Could not add native Athletics Office controls", e);
+            console.warn("[RB NIL] Athletics Office integration failed", e);
         }
     }
     function makePlayer(id, age) {
@@ -324,6 +326,26 @@
         addFrontOfficeUI(inst, other);
         return result;
     });
+    // This script is called directly by obj_frontoffice_Create after the room's
+    // native controls are initialized. Hooking it is reliable even when the
+    // engine has cached the object's Create-event function reference.
+    wrap("gml_Script_s_check_intro_rm_frontoffice", original => function (inst, other) {
+        const result = original.apply(this, arguments);
+        addFrontOfficeUI(inst, other);
+        return result;
+    });
+    // obj_button executes actions through script_execute, so route only our
+    // marked NIL button through the portal and leave the stock salary-cap
+    // button behavior untouched.
+    wrap("gml_Script_btn_click_Boost_Salary_Cap", original => function (inst, other) {
+        if (inst && inst.gmlrbnil_portal_button) {
+            M.caller = other;
+            M.game = main() || inst;
+            open();
+            return;
+        }
+        return original.apply(this, arguments);
+    });
     wrap("gml_Script_s_college_admissions_check_trigger", original => function (inst, other) {
         M.caller = other;
         M.game = inst || main();
@@ -375,5 +397,5 @@
         }
         if (event.key === "Escape" && M.active) close();
     });
-    log("Loaded NIL / Transfer Portal mod v" + M.version + " (native Athletics Office integration)");
+    log("Loaded NIL / Transfer Portal mod v" + M.version + " (Athletics Office hook: s_check_intro_rm_frontoffice)");
 })();
