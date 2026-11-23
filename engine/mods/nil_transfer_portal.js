@@ -356,12 +356,13 @@
         M.draftInst=draft;
         const x=Math.max(80,display_get_gui_width()-88);
         const button=instance_create_layer(x,12,"Instances",YYASSET_REF(0x00000014));
-        button.gmltext=POSITION_FILTERS[M.positionFilterIndex||0].label;
-        button.gmlonClickAction=rbNilCyclePositionFilter;
-        button.image_xscale=2.35;
-        button.image_yscale=1.35;
-        button.gmlactive=true;
-        button.visible=true;
+        const buttonInst=yyInst(draft,M.caller,button);
+        buttonInst.gmltext=POSITION_FILTERS[M.positionFilterIndex||0].label;
+        buttonInst.gmlonClickAction=rbNilCyclePositionFilter;
+        buttonInst.image_xscale=2.35;
+        buttonInst.image_yscale=1.35;
+        buttonInst.gmlactive=true;
+        buttonInst.visible=true;
         M.draftFilterButton=button.id;
     }
     function rbNilUpdateDraftPage(draft,other) {
@@ -383,7 +384,7 @@
             draft.gmlprofile=draft.gmlprofile||[];
             const card=instance_create_layer(x,y,"Instances",YYASSET_REF(0x00000032));
             draft.gmlprofile[count]=card;
-            card.gmlpmap=players[i];
+            yyInst(draft,other,card).gmlpmap=players[i];
             x+=80;
             if(count===4) { x=48; y+=88; }
             count++;
@@ -397,7 +398,7 @@
         if(game.gmldraft_page===1) yyInst(draft,other,100062).visible=false;
         if(game.gmldraft_page===draft.gmlpage_max) yyInst(draft,other,100063).visible=false;
         if(M.draftFilterButton && instance_exists(M.draftFilterButton)) {
-            M.draftFilterButton.gmltext=POSITION_FILTERS[M.positionFilterIndex||0].label;
+            yyInst(draft,other,M.draftFilterButton).gmltext=POSITION_FILTERS[M.positionFilterIndex||0].label;
         }
     }
     wrap("gml_Script_s_update_draft_page",original=>function(inst,other) {
