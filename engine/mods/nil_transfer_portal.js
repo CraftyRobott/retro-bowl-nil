@@ -1,13 +1,25 @@
 // @name Retro Bowl College NIL + Transfer Admissions
 // @description Converts the native Scholarship Fund into the NIL budget and expands native admissions with transfer candidates.
-// @version 0.5.8
+// @version 0.5.9
 (function () {
     "use strict";
     if (window.__RBNIL_LOADED__) return;
     window.__RBNIL_LOADED__ = true;
 
-    const M = window.RBNIL = { version: "0.5.8", game: null, caller: null, inProfileDraw: false, economyVersion: 0 };
+    const M = window.RBNIL = { version: "0.5.9", game: null, caller: null, inProfileDraw: false, economyVersion: 0, positionFilterIndex: 0, draftInstanceId: null, draftFilterButton: null, draftInst: null };
     const POSITIONS = [1,2,3,4,5,6,7,8,9,10];
+    const POSITION_FILTERS = [
+        { label:"ALL POS", positions:null },
+        { label:"QB", positions:[1] },
+        { label:"RB", positions:[2] },
+        { label:"WR", positions:[3] },
+        { label:"TE", positions:[4] },
+        { label:"OL", positions:[5] },
+        { label:"DL", positions:[6] },
+        { label:"LB", positions:[7] },
+        { label:"DB", positions:[8,9] },
+        { label:"K", positions:[10] }
+    ];
     const TRANSFER_COUNTS = [5,5,7,4,7,6,5,8,2,1];
     const log = (...a) => console.log("[RB NIL]", ...a);
     const warn = (...a) => console.warn("[RB NIL]", ...a);
@@ -315,6 +327,87 @@
         return original.call(this,inst,other,x,y,formatCandidatePriceText(value),...Array.prototype.slice.call(arguments,5));
     });
 
+
+    // Position filter for College Admissions. The original gmldraftlist is never
+    // edited: visible cards receive the original player-map references, so the
+    // game's native find_index() signing path still resolves the correct recruit.
+    function rbNilVisibleAdmissionsPlayers() {
+        const list=M.game&&M.game.gmldraftlist;
+        if(!list)return [];
+        const filter=POSITION_FILTERS[M.positionFilterIndex||0];
+        const players=[];
+        for(let i=0;i<ds_list_size(list);i++) {
+            const player=ds_list_find_value(list,i);
+            if(!filter.positions || filter.positions.includes(Number(get(player,"position")))) players.push(player);
+        }
+        return players;
+    }
+    function rbNilCyclePositionFilter(button,other) {
+        const draft=M.draftInst;
+        if(!draft || !instance_exists(draft.id))return;
+        M.caller=other||M.caller;
+        M.positionFilterIndex=((M.positionFilterIndex||0)+1)%POSITION_FILTERS.length;
+        draft.gmldraft_page=1;
+        window.gml_Script_s_update_draft_page(draft,M.caller);
+    }
+    function rbNilEnsurePositionFilterButton(draft) {
+        if(M.draftInstanceId===draft.id && M.draftFilterButton && instance_exists(M.draftFilterButton))return;
+        M.draftInstanceId=draft.id;
+        M.draftInst=draft;
+        const x=Math.max(80,display_get_gui_width()-88);
+        const button=instance_create_layer(x,12,"Instances",YYASSET_REF(0x00000014));
+        button.gmltext=POSITION_FILTERS[M.positionFilterIndex||0].label;
+        button.gmlonClickAction=rbNilCyclePositionFilter;
+        button.image_xscale=2.35;
+        button.image_yscale=1.35;
+        button.gmlactive=true;
+        button.visible=true;
+        M.draftFilterButton=button.id;
+    }
+    function rbNilUpdateDraftPage(draft,other) {
+        setContext(draft,other);
+        M.draftInst=draft;
+        rbNilEnsurePositionFilterButton(draft);
+        const players=rbNilVisibleAdmissionsPlayers();
+        const game=M.game;
+        draft.gmlpage_max=Math.max(1,Math.ceil(players.length/10));
+        game.gmldraft_page=clamp(Number(game.gmldraft_page)||1,1,draft.gmlpage_max);
+
+        const existing=GetWithArray(YYASSET_REF(0x00000032));
+        for(const key in existing) if(Object.prototype.hasOwnProperty.call(existing,key)) instance_destroy(existing[key]);
+
+        let x=48, y=48, count=0;
+        const first=(game.gmldraft_page-1)*10;
+        const last=Math.min(first+10,players.length);
+        for(let i=first;i<last;i++) {
+            draft.gmlprofile=draft.gmlprofile||[];
+            const card=instance_create_layer(x,y,"Instances",YYASSET_REF(0x00000032));
+            draft.gmlprofile[count]=card;
+            card.gmlpmap=players[i];
+            x+=80;
+            if(count===4) { x=48; y+=88; }
+            count++;
+        }
+
+        let pageText=window.gml_Script_s_str(draft,other,"ui_Page")+" "+game.gmldraft_page+"/"+draft.gmlpage_max;
+        if(draft.gmlpage_max<=1) pageText=window.gml_Script_s_str(draft,other,"ui_Page")+" "+game.gmldraft_page;
+        yyInst(draft,other,100064).gmltext=pageText;
+        yyInst(draft,other,100062).visible=true;
+        yyInst(draft,other,100063).visible=true;
+        if(game.gmldraft_page===1) yyInst(draft,other,100062).visible=false;
+        if(game.gmldraft_page===draft.gmlpage_max) yyInst(draft,other,100063).visible=false;
+        if(M.draftFilterButton && instance_exists(M.draftFilterButton)) {
+            M.draftFilterButton.gmltext=POSITION_FILTERS[M.positionFilterIndex||0].label;
+        }
+    }
+    wrap("gml_Script_s_update_draft_page",original=>function(inst,other) {
+        setContext(inst,other);
+        if(isCollege() && Number(M.game.gmlcollege_admissions_draft_round)>0) {
+            return rbNilUpdateDraftPage(inst,other);
+        }
+        return original.apply(this,arguments);
+    });
+
     // Keep the portal pool stable between picks.
     wrap("gml_Script_s_college_admissions_players_lost_per_round",()=>function(){return 0;});
     wrap("gml_Script_s_college_admissions_check_trigger",original=>function(inst,other) {
@@ -326,6 +419,7 @@
         setContext(inst,other); if(isCollege())initializeNativeFund();
         const result=original.apply(this,arguments);
         if(isCollege()&&Number(M.game.gmlcollege_admissions_draft_round)>0) {
+            M.positionFilterIndex=0; M.draftInstanceId=null; M.draftFilterButton=null; M.draftInst=null;
             addTransferCandidates();
             try { window.gml_Script_s_savegame(M.game,M.caller); }
             catch(e) { warn("Post-generation native save failed",e); }
@@ -362,5 +456,5 @@
         return result;
     });
 
-    log("Loaded native Scholarship Fund NIL conversion v"+M.version+"; native $1K units, cap, upgrades, affordability and deductions are active");
+    log("Loaded native Scholarship Fund NIL conversion v"+M.version+"; position-filtered admissions, native $1K NIL units, cap, upgrades, affordability and deductions are active");
 })();
