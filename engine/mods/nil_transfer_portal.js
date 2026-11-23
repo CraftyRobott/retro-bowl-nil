@@ -1,12 +1,12 @@
 // @name Retro Bowl College NIL + Transfer Admissions
 // @description Converts the native Scholarship Fund into the NIL budget and expands native admissions with transfer candidates.
-// @version 0.5.9
+// @version 0.6.0
 (function () {
     "use strict";
     if (window.__RBNIL_LOADED__) return;
     window.__RBNIL_LOADED__ = true;
 
-    const M = window.RBNIL = { version: "0.5.9", game: null, caller: null, inProfileDraw: false, economyVersion: 0, positionFilterIndex: 0, draftInstanceId: null, draftFilterButton: null, draftInst: null };
+    const M = window.RBNIL = { version: "0.6.0", game: null, caller: null, inProfileDraw: false, economyVersion: 0, positionFilterIndex: 0, draftInstanceId: null, draftFilterButton: null, draftInst: null };
     const POSITIONS = [1,2,3,4,5,6,7,8,9,10];
     const POSITION_FILTERS = [
         { label:"ALL POS", positions:null },
@@ -342,33 +342,83 @@
         }
         return players;
     }
-    function rbNilCyclePositionFilter(button,other) {
-        const draft=M.draftInst;
-        if(!draft || !instance_exists(draft.id))return;
-        M.caller=other||M.caller;
-        M.positionFilterIndex=((M.positionFilterIndex||0)+1)%POSITION_FILTERS.length;
-        draft.gmldraft_page=1;
-        window.gml_Script_s_update_draft_page(draft,M.caller);
+    function rbNilPositionDropdownChange(event) {
+        const value=Number(event.target.value);
+        M.positionFilterIndex=clamp(value,0,POSITION_FILTERS.length-1);
+        if(M.draftInst) {
+            M.draftInst.gmldraft_page=1;
+            window.gml_Script_s_update_draft_page(M.draftInst,M.caller);
+        }
     }
-    function rbNilEnsurePositionFilterButton(draft) {
-        if(M.draftInstanceId===draft.id && M.draftFilterButton && instance_exists(M.draftFilterButton))return;
+    function rbNilPositionDropdown() {
+        let select=document.getElementById("rbnil-position-filter");
+        if(select)return select;
+
+        const canvas=document.getElementById("canvas");
+        if(!canvas)return null;
+        const wrap=document.createElement("div");
+        wrap.id="rbnil-position-filter-wrap";
+        wrap.style.cssText=[
+            "position:fixed","z-index:2147483000","display:flex","align-items:center",
+            "gap:7px","padding:6px 8px","background:rgba(18,20,18,.94)",
+            "border:2px solid #d6c69a","border-radius:4px",
+            "box-shadow:0 2px 8px rgba(0,0,0,.55)","font: bold 12px Arial,sans-serif",
+            "color:#f4e7c3","pointer-events:auto"
+        ].join(";");
+
+        const label=document.createElement("label");
+        label.htmlFor="rbnil-position-filter";
+        label.textContent="POSITION";
+        label.style.cssText="color:#f4e7c3;letter-spacing:.5px;white-space:nowrap";
+
+        select=document.createElement("select");
+        select.id="rbnil-position-filter";
+        select.setAttribute("aria-label","Filter admissions by position");
+        select.style.cssText=[
+            "min-width:105px","padding:5px 24px 5px 8px",
+            "border:1px solid #d6c69a","border-radius:3px",
+            "background:#f2ead6","color:#20251e",
+            "font:bold 13px Arial,sans-serif","cursor:pointer",
+            "pointer-events:auto"
+        ].join(";");
+        POSITION_FILTERS.forEach((filter,index)=>{
+            const option=document.createElement("option");
+            option.value=String(index);
+            option.textContent=filter.label;
+            select.appendChild(option);
+        });
+        select.value=String(M.positionFilterIndex||0);
+        select.addEventListener("change",rbNilPositionDropdownChange);
+        wrap.appendChild(label);
+        wrap.appendChild(select);
+        document.body.appendChild(wrap);
+
+        const place=()=>{
+            const rect=canvas.getBoundingClientRect();
+            wrap.style.top=Math.max(4,rect.top+8)+"px";
+            wrap.style.left=Math.max(4,rect.right-wrap.offsetWidth-12)+"px";
+        };
+        place();
+        window.addEventListener("resize",place);
+        window.addEventListener("scroll",place,true);
+        return select;
+    }
+    function rbNilEnsurePositionDropdown(draft) {
         M.draftInstanceId=draft.id;
         M.draftInst=draft;
-        const x=Math.max(80,display_get_gui_width()-88);
-        const button=instance_create_layer(x,12,"Instances",YYASSET_REF(0x00000014));
-        const buttonInst=yyInst(draft,M.caller,button);
-        buttonInst.gmltext=POSITION_FILTERS[M.positionFilterIndex||0].label;
-        buttonInst.gmlonClickAction=rbNilCyclePositionFilter;
-        buttonInst.image_xscale=2.35;
-        buttonInst.image_yscale=1.35;
-        buttonInst.gmlactive=true;
-        buttonInst.visible=true;
-        M.draftFilterButton=button.id;
+        // Clean up the experimental in-game button from v0.5.9 if this session
+        // hot-reloads the mod without refreshing the page.
+        if(M.draftFilterButton) {
+            try { if(instance_exists(M.draftFilterButton))instance_destroy(M.draftFilterButton); } catch(_) {}
+            M.draftFilterButton=null;
+        }
+        const select=rbNilPositionDropdown();
+        if(select)select.value=String(M.positionFilterIndex||0);
     }
     function rbNilUpdateDraftPage(draft,other) {
         setContext(draft,other);
         M.draftInst=draft;
-        rbNilEnsurePositionFilterButton(draft);
+        rbNilEnsurePositionDropdown(draft);
         const players=rbNilVisibleAdmissionsPlayers();
         const game=M.game;
         draft.gmlpage_max=Math.max(1,Math.ceil(players.length/10));
@@ -397,9 +447,8 @@
         yyInst(draft,other,100063).visible=true;
         if(game.gmldraft_page===1) yyInst(draft,other,100062).visible=false;
         if(game.gmldraft_page===draft.gmlpage_max) yyInst(draft,other,100063).visible=false;
-        if(M.draftFilterButton && instance_exists(M.draftFilterButton)) {
-            yyInst(draft,other,M.draftFilterButton).gmltext=POSITION_FILTERS[M.positionFilterIndex||0].label;
-        }
+        const filterSelect=document.getElementById("rbnil-position-filter");
+        if(filterSelect)filterSelect.value=String(M.positionFilterIndex||0);
     }
     wrap("gml_Script_s_update_draft_page",original=>function(inst,other) {
         setContext(inst,other);
@@ -457,5 +506,5 @@
         return result;
     });
 
-    log("Loaded native Scholarship Fund NIL conversion v"+M.version+"; position-filtered admissions, native $1K NIL units, cap, upgrades, affordability and deductions are active");
+    log("Loaded native Scholarship Fund NIL conversion v"+M.version+"; HTML position dropdown admissions filter, native $1K NIL units, cap, upgrades, affordability and deductions are active");
 })();
