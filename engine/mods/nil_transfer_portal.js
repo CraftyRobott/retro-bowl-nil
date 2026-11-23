@@ -1,19 +1,19 @@
 // @name Retro Bowl College NIL + Transfer Admissions
 // @description Converts the native Scholarship Fund into the NIL budget and expands native admissions with transfer candidates.
-// @version 0.6.1
+// @version 0.6.2
 (function () {
     "use strict";
     if (window.__RBNIL_LOADED__) return;
     window.__RBNIL_LOADED__ = true;
 
-    const M = window.RBNIL = { version: "0.6.1", game: null, caller: null, inProfileDraw: false, economyVersion: 0, positionFilterIndex: 0, draftInstanceId: null, draftFilterButton: null, draftInst: null };
+    const M = window.RBNIL = { version: "0.6.2", game: null, caller: null, inProfileDraw: false, economyVersion: 0, positionFilterIndex: 0, draftInstanceId: null, draftFilterButton: null, draftInst: null };
     const POSITIONS = [1,2,3,4,5,6,7,8,9,10];
     const POSITION_FILTERS = [
         { label:"ALL POS", positions:null },
         { label:"QB", positions:[1] },
         { label:"RB", positions:[2] },
-        { label:"WR", positions:[3] },
-        { label:"TE", positions:[4] },
+        { label:"WR", positions:[4] },
+        { label:"TE", positions:[3] },
         { label:"OL", positions:[5] },
         { label:"DL", positions:[6] },
         { label:"LB", positions:[7] },
