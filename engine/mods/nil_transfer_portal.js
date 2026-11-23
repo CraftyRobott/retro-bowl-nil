@@ -55,14 +55,14 @@
         catch (_) { return 0; }
     }
     function nilValue(r) {
-        if (r >= 5) return 7000000;
-        if (r >= 4.5) return 5000000;
-        if (r >= 4) return 3500000;
-        if (r >= 3.5) return 2200000;
-        if (r >= 3) return 1300000;
-        if (r >= 2.5) return 800000;
-        if (r >= 2) return 500000;
-        if (r >= 1.5) return 300000;
+        if (r >= 10) return 7000000;
+        if (r >= 9) return 5000000;
+        if (r >= 8) return 3500000;
+        if (r >= 7) return 2200000;
+        if (r >= 6) return 1300000;
+        if (r >= 5) return 800000;
+        if (r >= 4) return 500000;
+        if (r >= 3) return 300000;
         return 150000;
     }
     const cash = n => "$" + (Number(n) / 1000000).toFixed(2) + "M";
@@ -85,7 +85,7 @@
         M.year = Number(M.game.gmlyear);
     }
     function makePlayer(id, age) {
-        const p = window.gml_Script_s_create_player(M.game, M.caller, id, age, 1, 4);
+        const p = window.gml_Script_s_create_player(M.game, M.caller, id, age, 2, 9);
         if (!p || typeof p !== "number") return null;
         try { window.gml_Script_s_college_correct_new_player(M.game, M.caller, p); } catch (_) {}
         mapSet(p, "age", age);
@@ -224,7 +224,7 @@
             const card = el("div", { class: "rbnil-player" }, list);
             const row = el("div", { class: "rbnil-row" }, card);
             el("div", { class: "rbnil-name", text: String(mapGet(p, "fname") || "") + " " + String(mapGet(p, "lname") || "") }, row);
-            el("div", { class: "rbnil-rating", text: rating(p).toFixed(1) + "★" }, row);
+            el("div", { class: "rbnil-rating", text: rating(p).toFixed(1) + "/10" }, row);
             el("div", { class: "rbnil-meta", text: pos(mapGet(p, "position")) + " · " + classYear(p) }, card);
             const stats = el("div", { class: "rbnil-stats" }, card);
             ["speed", "strength", "skill", "stamina"].forEach(k => el("span", { text: k.slice(0, 3).toUpperCase() + " " + (mapGet(p, k) || 0) }, stats));
