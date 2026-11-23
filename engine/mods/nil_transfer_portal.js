@@ -1,13 +1,13 @@
 // @name Retro Bowl College NIL + Transfer Portal
 // @description Persistent transfer portal and annual NIL budget for Retro Bowl College.
-// @version 0.2.0
+// @version 0.2.1
 (function () {
     "use strict";
     if (window.__RBNIL_LOADED__) return;
     window.__RBNIL_LOADED__ = true;
 
     const M = window.RBNIL = {
-        version: "0.2.0", active: false, pool: [], year: -1, generated: false,
+        version: "0.2.1", active: false, pool: [], year: -1, generated: false,
         budget: 0, cap: 0, spent: 0, position: "ALL", game: null, caller: null, overlay: null,
         officeLabel: null, officeButton: null
     };
