@@ -321,17 +321,26 @@
         next.__rbnilWrapped = true;
         window[name] = next;
     }
+    function scheduleFrontOfficeUI(inst, other) {
+        // The helper script runs partway through obj_frontoffice's Create event.
+        // Defer creation until the whole event has finished adding stock staff
+        // and salary-cap controls, otherwise those controls can cover the NIL UI.
+        window.setTimeout(() => {
+            addFrontOfficeUI(inst, other);
+            if (M.officeLabel) M.officeLabel.depth = -100000;
+            if (M.officeButton) M.officeButton.depth = -100000;
+        }, 0);
+    }
     wrap("gml_Object_obj_frontoffice_Create_0", original => function (inst, other) {
         const result = original.apply(this, arguments);
-        addFrontOfficeUI(inst, other);
+        scheduleFrontOfficeUI(inst, other);
         return result;
     });
-    // This script is called directly by obj_frontoffice_Create after the room's
-    // native controls are initialized. Hooking it is reliable even when the
-    // engine has cached the object's Create-event function reference.
+    // This script is called partway through obj_frontoffice_Create. Defer the
+    // UI creation so it happens after the stock Create event finishes.
     wrap("gml_Script_s_check_intro_rm_frontoffice", original => function (inst, other) {
         const result = original.apply(this, arguments);
-        addFrontOfficeUI(inst, other);
+        scheduleFrontOfficeUI(inst, other);
         return result;
     });
     // obj_button executes actions through script_execute, so route only our
