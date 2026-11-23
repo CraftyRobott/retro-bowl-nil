@@ -1,36 +1,49 @@
-# Retro Bowl College NIL + Transfer Portal
+# Retro Bowl College NIL + Transfer Admissions
 
-An in-progress standalone mod for Retro Bowl College HTML5. It is designed to run through the existing `engine/mods/loader.js` without editing `RetroBowl.js`.
+An in-progress standalone mod for Retro Bowl College HTML5. It runs through the existing `engine/mods/loader.js` and does not modify `RetroBowl.js`.
 
 ## Current implementation
 
-- Intercepts the college admissions trigger and prepares the offseason portal pool instead of opening the stock admissions draft.
-- Adds a native Retro Bowl-style NIL balance readout and Transfer Portal button to the college Athletics Office, using the game's own text and button objects.
-- Restyles the portal panel to better match the game's dark menu, bright accent, and compact card styling. The player-list panel is still an HTML overlay in this version; its controls have not yet been fully ported to the game's native draw system.
-- Generates a position-balanced pool of transfer players using the game's own player-generation functions.
-- Includes all four college class years (FR, SO, JR, SR).
-- Groups players by QB, RB, WR, TE, OL, DL, LB, DB, and K.
-- Keeps one pool for the full offseason; reopening the portal does not reroll players.
-- Adds a Generate More action that appends players to the existing pool.
-- Signs players into the real game roster and deducts their annual NIL valuation.
-- Extends the game's INI save with the portal pool and NIL budget so the pool survives save/load.
-- Expires the old portal at the next season transition.
+- Reuses the game's native college admissions trigger, admissions room, player list, paging, player profiles, confirmation flow, roster insertion, and admissions cleanup.
+- Keeps the game's original 50 freshman candidates and appends up to 50 additional transfer candidates.
+- Generates the additional candidates across all ten native position IDs, with ages 19–21 (sophomores, juniors, and seniors).
+- Prices both freshman and transfer candidates using the mod's annual NIL valuation scale.
+- Displays the candidate's NIL offer and remaining team budget in the native player-profile detail screen.
+- Charges the NIL budget only after the native confirmation handler successfully adds the candidate to the roster.
+- Sets admissions recruitment-credit cost to zero for NIL candidates, keeping recruiting credits separate from NIL dollars.
+- Prevents other schools from removing candidates between admissions picks, so the list behaves like a transfer portal rather than a competitive draft.
+- Preserves the native admissions Done/Finish flow.
+- Saves NIL budget, cap, spending, and year in the save's `rbnil` INI section. The candidate list itself is saved by the game's native draft-list save code.
+- Refreshes the annual NIL budget at the next season transition. Unspent budget does not carry over.
 
 ## Install
 
 Copy `engine/mods/nil_transfer_portal.js` into the game's `engine/mods/` directory. The existing auto-discovering loader should detect it.
 
-## Controls
+## How it works in-game
 
-- Open **Front Office / Athletics Office** and select the native **Transfer Portal** button.
-- The NIL balance shown in the office is the current remaining annual budget.
-- Press **N** to reopen the current portal while its offseason pool is active (debug/recovery shortcut).
-- Press **Escape** or use **Close** to dismiss it.
+1. Enter the offseason and open the game's normal **Admissions** screen.
+2. Browse the expanded native player list. It should contain freshmen plus upper-class transfers.
+3. Select a player to open the normal player profile. The profile's secondary value line displays the annual NIL offer and remaining budget.
+4. Confirm the selection through the game's normal confirmation prompt. The native roster/signing flow runs, and the NIL amount is deducted.
+5. Use the game's normal Done/Finish control to close admissions.
 
-## Development status
+There is no separate Transfer Portal button, HTML overlay, or keyboard shortcut in this version.
 
-This is the first playable integration pass, not the finished NIL system. Program-tier budget mapping, annual player retention/renewal offers, NIL cap upgrades, roster-limit verification across game variants, and full native rendering of the portal player list and offer controls remain on the roadmap. The initial budget tier is deliberately isolated in the code and currently uses the team's offense/defense ratings as a temporary proxy.
+## Current budget model
+
+The budget tiers are still provisional and use the team's offense/defense ratings as a program-strength proxy:
+
+- Top programs: $50M
+- Upper-middle programs: $37M
+- Lower programs: $10M
+
+The cap never decreases below a previously established value. Exact school-tier mapping, coaching-credit NIL cap upgrades, annual retention/renewal offers, and roster-limit behavior still need further work.
+
+## Testing status
+
+Version 0.3.0 has been syntax-checked and its source integration points have been checked against the uploaded game decompilation. It has **not yet been verified in a live game session**. In particular, confirm that the admissions list reaches 100 candidates, upper-class ages display correctly, NIL values appear in the player profile, signing deducts the budget once, and the save/load cycle preserves the expanded list and budget.
 
 ## Source integration notes
 
-The mod uses the game's existing functions for player creation, college player correction, rating calculation, team lookup, and save-slot naming. It wraps the admissions trigger, save/load functions, and new-season function at runtime. The base game file is not modified.
+The mod wraps the native admissions trigger and player-list generator, the admissions attrition function, the player confirmation handler, the native player-profile draw event, save/load, and new-season transition. All game player creation and roster insertion continue to use the game's own functions.
