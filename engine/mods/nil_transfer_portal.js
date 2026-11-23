@@ -1,12 +1,12 @@
 // @name Retro Bowl College NIL + Transfer Admissions
 // @description Converts the native Scholarship Fund into the NIL budget and expands native admissions with transfer candidates.
-// @version 0.4.0
+// @version 0.5.0
 (function () {
     "use strict";
     if (window.__RBNIL_LOADED__) return;
     window.__RBNIL_LOADED__ = true;
 
-    const M = window.RBNIL = { version: "0.4.0", game: null, caller: null, inProfileDraw: false, economyVersion: 0 };
+    const M = window.RBNIL = { version: "0.5.0", game: null, caller: null, inProfileDraw: false, economyVersion: 0 };
     const POSITIONS = [1,2,3,4,5,6,7,8,9,10];
     const TRANSFER_COUNTS = [5,5,7,4,7,6,5,8,2,1];
     const log = (...a) => console.log("[RB NIL]", ...a);
@@ -31,12 +31,17 @@
         try { return Number(window.gml_Script_s_get_player_rating(M.game,M.caller,player))||0; }
         catch (_) { return 0; }
     }
+    // Native Scholarship Fund values are displayed in thousands of dollars.
+    // Store all NIL amounts in that same native unit: 1 = $1K, 1,000 = $1M.
     function nilValue(r) {
-        if(r>=10)return 7; if(r>=9)return 5; if(r>=8)return 3.5; if(r>=7)return 2.2;
-        if(r>=6)return 1.3; if(r>=5)return .8; if(r>=4)return .5; if(r>=3)return .3;
-        return .15;
+        if(r>=10)return 7000; if(r>=9)return 5000; if(r>=8)return 3500; if(r>=7)return 2200;
+        if(r>=6)return 1300; if(r>=5)return 800; if(r>=4)return 500; if(r>=3)return 300;
+        return 150;
     }
-    function money(v) { return "$"+(Number(v)||0).toFixed(2)+"M"; }
+    function money(v) {
+        const amount=Number(v)||0;
+        return amount>=1000?"$"+(amount/1000).toFixed(2)+"M":"$"+Math.round(amount)+"K";
+    }
 
     // Native conference prestige + the team's existing offense/defense ratings:
     // prestige 3 + strong team = top tier ($48-52M); other prestige-3 teams = lower P4 ($8-12M);
@@ -53,9 +58,14 @@
         } catch(e) { warn("Could not determine school NIL tier; using $10M fallback",e); return 10; }
     }
     // Keep gmlrecruitment_credits_cap at 50/60: the base game uses it for 10/12 roster size.
-    // The native boost field is repurposed as permanent $M increments.
+    // The native boost field stores permanent cap increases in the same $1K unit as the wallet.
     function nativeFundCap(game=M.game,caller=M.caller) {
-        return game ? schoolBaseBudget(game,caller)+(Number(game.gmlboost_recruitment_credits_cap)||0) : 10;
+        return game ? Math.round(schoolBaseBudget(game,caller)*1000)+(Number(game.gmlboost_recruitment_credits_cap)||0) : 10000;
+    }
+    function ensureNativeCapBinding(game=M.game) {
+        if(!game||typeof window.__yy_method!=="function"||typeof window.gml_Script_recruitment_credits_cap_total!=="function")return;
+        try { game.gmlrecruitment_credits_cap_total=window.__yy_method(game,window.gml_Script_recruitment_credits_cap_total); }
+        catch(e) { warn("Could not refresh native Scholarship Fund cap binding",e); }
     }
 
     function priceCandidate(player) {
@@ -110,20 +120,34 @@
     function writeEconomyVersion() {
         try {
             const f=currentSaveName(); if(!f||typeof ini_open!=="function")return;
-            ini_open(f); ini_write_real("savegame","nil_economy_version",1); ini_close();
+            ini_open(f); ini_write_real("savegame","nil_economy_version",2); ini_close();
         } catch(e) { warn("Could not write NIL migration marker",e); try{ini_close();}catch(_){} }
     }
     function initializeNativeFund(filename) {
-        if(!isCollege()||M.economyVersion>=1)return;
-        if(readEconomyVersion(filename||currentSaveName())>=1) { M.economyVersion=1; return; }
-        // Previous mod versions stored native Coaching Credit boosts in old $K units (+30).
-        const oldBoost=Number(M.game.gmlboost_recruitment_credits_cap)||0;
-        if(oldBoost>10) M.game.gmlboost_recruitment_credits_cap=oldBoost/10;
-        // One-time migration: use the existing native fund balance, not a separate NIL account.
+        if(!isCollege())return;
+        const savedVersion=Math.max(M.economyVersion,readEconomyVersion(filename||currentSaveName()));
+        if(savedVersion>=2) { M.economyVersion=2; ensureNativeCapBinding(); return; }
+
+        if(savedVersion===1) {
+            // v0.4 stored dollars-in-millions as small decimals (e.g. 31.56).
+            // Convert the saved wallet and permanent upgrades into native $1K units.
+            M.game.gmlrecruitment_credits=Math.round((Number(M.game.gmlrecruitment_credits)||0)*1000);
+            M.game.gmlboost_recruitment_credits_cap=Math.round((Number(M.game.gmlboost_recruitment_credits_cap)||0)*1000);
+        } else {
+            // Convert any pre-v0.4 native +30K coaching upgrades to +$3M increments.
+            const oldBoost=Number(M.game.gmlboost_recruitment_credits_cap)||0;
+            M.game.gmlboost_recruitment_credits_cap=Math.round(oldBoost*100);
+            M.game.gmlrecruitment_credits=0;
+        }
+
+        // Refill the native Scholarship Fund once during migration; all future deductions
+        // and affordability checks continue to use the game's original wallet and rc_cost.
         M.game.gmlrecruitment_credits=nativeFundCap();
         M.game.gmlrc_season_earned=0; M.game.gmlrc_season_spent=0;
-        M.economyVersion=1;
-        log("Converted native Scholarship Fund to NIL budget",money(M.game.gmlrecruitment_credits),"cap",money(nativeFundCap()));
+        M.economyVersion=2;
+        ensureNativeCapBinding();
+        writeEconomyVersion();
+        log("Migrated native Scholarship Fund to NIL units",money(M.game.gmlrecruitment_credits),"cap",money(nativeFundCap()));
     }
     function resetAnnualNativeFund() {
         if(!isCollege())return;
@@ -169,7 +193,7 @@
         setContext(inst,other);
         if(!isCollege())return original.apply(this,arguments);
         window.gml_Script_s_msg_clear(M.game,M.caller);
-        M.game.gmlboost_recruitment_credits_cap=(Number(M.game.gmlboost_recruitment_credits_cap)||0)+3;
+        M.game.gmlboost_recruitment_credits_cap=(Number(M.game.gmlboost_recruitment_credits_cap)||0)+3000;
         M.game.gmlcoach_credit=Math.max(0,Number(M.game.gmlcoach_credit)-100);
         if(typeof room_goto==="function")room_goto(YYASSET_REF(0x03000009));
         log("Coaching Credit upgrade applied; native NIL cap is now",money(nativeFundCap()));
@@ -200,7 +224,10 @@
         setContext(inst,other); const result=original.apply(this,arguments); updateFundWidget(inst); return result;
     });
     wrap("gml_Object_obj_salarycap_Draw_64",original=>function(inst,other) {
-        setContext(inst,other); updateFundWidget(inst); return original.apply(this,arguments);
+        setContext(inst,other);
+        const result=original.apply(this,arguments);
+        updateFundWidget(inst);
+        return result;
     });
     wrap("gml_Script_draw_custom_recruitment_credits_display",original=>function(inst,other,x,y) {
         setContext(inst,other);
@@ -209,12 +236,20 @@
         window.gml_Script_draw_hd_text(inst,other,x,y,money(M.game.gmlrecruitment_credits)+" / "+money(nativeFundCap()));
     });
 
-    // The native profile draws rc_cost itself; change only its old "Thousand" suffix.
+    // The native profile draws "$" + rc_cost + suffix. Convert the resulting native
+    // $1K figure to a readable $M/YR label without changing affordability or deductions.
     wrap("gml_Object_obj_player_profile_Draw_64",original=>function(inst,other) {
         setContext(inst,other);
         M.inProfileDraw=!!(inst.gmlpmap&&Number(get(inst.gmlpmap,"rbnil_candidate"))===1&&isCollege());
         try { return original.apply(this,arguments); }
         finally { M.inProfileDraw=false; }
+    });
+    wrap("gml_Script_draw_hd_text",original=>function(inst,other,x,y,value) {
+        if(M.inProfileDraw&&typeof value==="string") {
+            const match=value.match(/^\$(\d+(?:\.\d+)?)M\/YR$/);
+            if(match)value="$"+(Number(match[1])/1000).toFixed(2)+"M/YR";
+        }
+        return original.call(this,inst,other,x,y,value);
     });
 
     // Keep the portal pool stable between picks.
@@ -237,10 +272,16 @@
 
     // Migration marker is stored in the game's own [savegame] section. The native
     // balance, cap, Coaching Credit upgrades and player costs are all saved by the game.
+    wrap("gml_GlobalScript_s_recruitment_credits",original=>function(inst,other) {
+        const result=original.apply(this,arguments);
+        setContext(inst,other);
+        if(isCollege())ensureNativeCapBinding();
+        return result;
+    });
     wrap("gml_Script_s_loadgame",original=>function(inst,other,filename) {
         M.caller=other; const result=original.apply(this,arguments);
         M.game=main()||inst; M.caller=other; M.economyVersion=readEconomyVersion(filename);
-        if(isCollege()) { initializeNativeFund(filename); refreshCandidateCosts(); }
+        if(isCollege()) { initializeNativeFund(filename); refreshCandidateCosts(); ensureNativeCapBinding(); }
         return result;
     });
     wrap("gml_Script_s_savegame",original=>function(inst,other) {
@@ -258,5 +299,5 @@
         return result;
     });
 
-    log("Loaded native Scholarship Fund NIL conversion v"+M.version+"; native balance, cap, upgrades, affordability and deductions are active");
+    log("Loaded native Scholarship Fund NIL conversion v"+M.version+"; native $1K units, cap, upgrades, affordability and deductions are active");
 })();
