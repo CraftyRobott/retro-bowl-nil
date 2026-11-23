@@ -117,9 +117,7 @@
 
             const button = instance_create_layer(360, 91, "Instances", YYASSET_REF(0x00000014));
             button.gmltext = "TRANSFER PORTAL";
-            button.gmlbtn_image = YYASSET_REF(0x01000069);
-            button.sprite_index = YYASSET_REF(0x01000069);
-            button.image_xscale = 1.9393;
+            // Keep obj_button's native default sprite and sizing.
             button.gmlactive = true;
             button.gmlonClickAction = kgml_Script_btn_click_Boost_Salary_Cap;
             button.gmlrbnil_portal_button = true;
