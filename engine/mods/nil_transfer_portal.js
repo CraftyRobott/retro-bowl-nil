@@ -6,7 +6,7 @@
     if (window.__RBNIL_LOADED__) return;
     window.__RBNIL_LOADED__ = true;
 
-    const M = window.RBNIL = { version: "0.5.4", game: null, caller: null, inProfileDraw: false, economyVersion: 0 };
+    const M = window.RBNIL = { version: "0.5.5", game: null, caller: null, inProfileDraw: false, economyVersion: 0 };
     const POSITIONS = [1,2,3,4,5,6,7,8,9,10];
     const TRANSFER_COUNTS = [5,5,7,4,7,6,5,8,2,1];
     const log = (...a) => console.log("[RB NIL]", ...a);
@@ -231,21 +231,10 @@
         }
     });
 
-    function updateFundWidget(inst) {
-        if(!isCollege())return;
-        const cap=nativeFundCap();
-        inst.gmltitle="NIL BUDGET "+money(M.game.gmlrecruitment_credits)+" / "+money(cap);
-        inst.gmlpercent=cap>0?clamp((Number(M.game.gmlrecruitment_credits)/cap)*100,0,100):0;
-    }
-    wrap("gml_Object_obj_salarycap_Create_0",original=>function(inst,other) {
-        setContext(inst,other); const result=original.apply(this,arguments); updateFundWidget(inst); return result;
-    });
-    wrap("gml_Object_obj_salarycap_Draw_64",original=>function(inst,other) {
-        setContext(inst,other);
-        const result=original.apply(this,arguments);
-        updateFundWidget(inst);
-        return result;
-    });
+    // obj_salarycap's Create/Draw callbacks are captured in the runtime's GMObjects
+    // table during engine initialization. Replacing their global names after startup
+    // does not replace those already-registered callbacks, so format the title at the
+    // live draw_hd_text call instead (the event calls this global script dynamically).
     wrap("gml_Script_draw_custom_recruitment_credits_display",original=>function(inst,other,x,y) {
         setContext(inst,other);
         if(!isCollege())return original.apply(this,arguments);
@@ -274,7 +263,17 @@
         return "$"+(amount/1000).toFixed(2)+"M";
     }
     wrap("gml_Script_draw_hd_text",original=>function(inst,other,x,y,value) {
-        return original.call(this,inst,other,x,y,formatCandidatePriceText(value));
+        setContext(inst,other);
+        // The native salary-cap widget's registered Draw event builds this title
+        // once as "NIL BUDGET <balance>K / <cap>K". Convert it at the final text
+        // helper so the visible widget is correct even though its event callback
+        // was registered before this mod loaded.
+        if(isCollege()&&typeof value==="string"&&/^NIL BUDGET(?:\\s|$)/i.test(value)) {
+            value="NIL BUDGET "+money(M.game.gmlrecruitment_credits)+" / "+money(nativeFundCap());
+        } else {
+            value=formatCandidatePriceText(value);
+        }
+        return original.call(this,inst,other,x,y,value);
     });
     wrap("gml_Script_draw_hd_text_color",original=>function(inst,other,x,y,value) {
         return original.call(this,inst,other,x,y,formatCandidatePriceText(value),...Array.prototype.slice.call(arguments,5));
