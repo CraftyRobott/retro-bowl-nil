@@ -1,12 +1,12 @@
 // @name Retro Bowl College NIL + Transfer Admissions
 // @description Converts the native Scholarship Fund into the NIL budget and expands native admissions with transfer candidates.
-// @version 0.5.2
+// @version 0.5.3
 (function () {
     "use strict";
     if (window.__RBNIL_LOADED__) return;
     window.__RBNIL_LOADED__ = true;
 
-    const M = window.RBNIL = { version: "0.5.2", game: null, caller: null, inProfileDraw: false, economyVersion: 0 };
+    const M = window.RBNIL = { version: "0.5.3", game: null, caller: null, inProfileDraw: false, economyVersion: 0 };
     const POSITIONS = [1,2,3,4,5,6,7,8,9,10];
     const TRANSFER_COUNTS = [5,5,7,4,7,6,5,8,2,1];
     const log = (...a) => console.log("[RB NIL]", ...a);
@@ -266,7 +266,7 @@
         // dollar-denominated native K label to millions at the final text layer.
         // This deliberately does not depend on M.inProfileDraw: GameMaker may
         // invoke its text helper after the profile Draw event's wrapper context.
-        const match=value.match(/^\$(\d[\d,]*(?:\.\d+)?)(?:K|M(?:\/YR)?)$/);
+        const match=value.match(/^\$(\d[\d,]*(?:\.\d+)?)(?:K|M(?:\/YR)?)$/i);
         if(!match)return value;
         const amount=Number(match[1].replace(/,/g,""));
         if(!Number.isFinite(amount))return value;
