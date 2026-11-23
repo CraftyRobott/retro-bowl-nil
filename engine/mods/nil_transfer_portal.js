@@ -1,14 +1,15 @@
 // @name Retro Bowl College NIL + Transfer Portal
 // @description Persistent transfer portal and annual NIL budget for Retro Bowl College.
-// @version 0.1.0
+// @version 0.2.0
 (function () {
     "use strict";
     if (window.__RBNIL_LOADED__) return;
     window.__RBNIL_LOADED__ = true;
 
     const M = window.RBNIL = {
-        version: "0.1.0", active: false, pool: [], year: -1, generated: false,
-        budget: 0, cap: 0, spent: 0, position: "ALL", game: null, caller: null, overlay: null
+        version: "0.2.0", active: false, pool: [], year: -1, generated: false,
+        budget: 0, cap: 0, spent: 0, position: "ALL", game: null, caller: null, overlay: null,
+        officeLabel: null, officeButton: null
     };
     const POS = [
         { key: "QB", ids: [1], count: 10 }, { key: "RB", ids: [2], count: 10 },
@@ -82,7 +83,49 @@
         M.cap = Math.max(Number(M.cap) || 0, budgetForSchool());
         M.budget = M.cap;
         M.spent = 0;
+        updateOfficeDisplay();
         M.year = Number(M.game.gmlyear);
+    }
+    function updateOfficeDisplay() {
+        try {
+            if (M.officeLabel && instance_exists(M.officeLabel)) {
+                M.officeLabel.gmltext = "NIL AVAILABLE: " + cash(M.budget);
+            }
+        } catch (_) {}
+    }
+    function addFrontOfficeUI(inst, other) {
+        try {
+            M.caller = other;
+            M.game = main() || inst;
+            if (!college()) return;
+            // Use the game's own text and button objects so the office controls
+            // inherit native fonts, focus animation, touch, and gamepad behavior.
+            const label = instance_create_layer(365, 177, "Instances", YYASSET_REF(0x0000004b));
+            label.gmltext = "NIL AVAILABLE: " + cash(M.budget);
+            label.gmldraw_box = false;
+            label.gmlhalign = 1;
+            label.gmlvalign = 1;
+            label.gmlfont = global.gmlfnt_small_flex;
+            label.gmltcolour = global.gmlc_primary;
+            label.gmlshadow = true;
+            M.officeLabel = label;
+
+            const button = instance_create_layer(300, 193, "Instances", YYASSET_REF(0x00000014));
+            button.gmltext = "TRANSFER PORTAL";
+            button.gmlbtn_image = YYASSET_REF(0x01000069);
+            button.sprite_index = YYASSET_REF(0x01000069);
+            button.image_xscale = 1.9393;
+            button.gmlactive = true;
+            button.gmlgp_mapped_button = 32773;
+            button.gmlonClickAction = function (buttonInst, buttonOther) {
+                M.caller = buttonOther;
+                M.game = main() || buttonInst;
+                open();
+            };
+            M.officeButton = button;
+        } catch (e) {
+            console.warn("[RB NIL] Could not add native Athletics Office controls", e);
+        }
     }
     function makePlayer(id, age) {
         const p = window.gml_Script_s_create_player(M.game, M.caller, id, age, 2, 9);
@@ -162,6 +205,7 @@
         ds_list_add(M.game.gmlroster, p);
         M.spent += value;
         M.budget -= value;
+        updateOfficeDisplay();
         M.pool.splice(i, 1);
         saveExtension();
         render();
@@ -172,18 +216,18 @@
     function styles() {
         if (document.getElementById("rbnil-css")) return;
         const css = [
-            "#rbnil-overlay{position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;color:#f4f4f4}",
-            "#rbnil-panel{width:min(1100px,96vw);height:min(720px,94vh);background:#171a1c;border:3px solid #ddd;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 50px #000}",
-            "#rbnil-head{background:#252b2f;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #090a0b}",
-            "#rbnil-title{font-size:24px;font-weight:900;letter-spacing:1px}#rbnil-sub{font-size:11px;color:#aeb8bd;margin-top:3px}",
-            "#rbnil-close{background:#a72d2d;color:white;border:0;padding:8px 13px;font-weight:bold;cursor:pointer}",
-            "#rbnil-summary{display:flex;gap:22px;flex-wrap:wrap;padding:10px 18px;background:#101315;font-size:13px;border-bottom:1px solid #3a4145}#rbnil-summary b,.rbnil-value{color:#f5d76e}",
-            "#rbnil-tabs{display:flex;gap:4px;padding:9px 12px 0;background:#1d2225;flex-wrap:wrap}.rbnil-tab{background:#343c41;color:#eee;border:0;padding:8px 12px;font-weight:bold;cursor:pointer}.rbnil-tab.active{background:#e2c65b;color:#151515}",
-            "#rbnil-tools{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#202629}#rbnil-tools button{background:#3b454b;color:white;border:1px solid #758087;padding:7px 10px;cursor:pointer}",
-            "#rbnil-list{padding:12px;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));gap:10px;align-content:start}",
-            ".rbnil-player{background:#262d31;border:1px solid #59646a;padding:11px;min-height:105px}.rbnil-row{display:flex;justify-content:space-between;align-items:center;gap:8px}.rbnil-name{font-weight:800;font-size:15px}.rbnil-rating{color:#f5d76e;font-weight:bold}.rbnil-meta{color:#aab5ba;font-size:12px;margin:6px 0}.rbnil-stats{display:flex;gap:8px;flex-wrap:wrap;color:#d1d8dc;font-size:11px;margin-bottom:10px}.rbnil-sign{background:#e2c65b;border:0;padding:7px 10px;font-weight:900;cursor:pointer}",
-            "#rbnil-empty{grid-column:1/-1;text-align:center;padding:45px;color:#b8c0c4}#rbnil-foot{padding:8px 14px;background:#101315;color:#9ca8ad;font-size:11px}",
-            "@media(max-width:650px){#rbnil-summary{gap:8px;font-size:11px}.rbnil-tab{padding:7px 9px}#rbnil-title{font-size:18px}}"
+            "#rbnil-overlay{position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,.86);display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;color:#fff}",
+            "#rbnil-panel{width:min(960px,96vw);height:min(650px,94vh);background:#202020;border:4px solid #f4f0df;outline:3px solid #111;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 0 #080808}",
+            "#rbnil-head{background:#303030;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #111}",
+            "#rbnil-title{font-size:22px;font-weight:900;letter-spacing:1px;text-transform:uppercase}#rbnil-sub{font-size:10px;color:#c5c5c5;margin-top:3px;letter-spacing:.5px}",
+            "#rbnil-close{background:#9b3030;color:white;border:2px solid #111;padding:7px 12px;font-weight:bold;cursor:pointer;text-transform:uppercase}",
+            "#rbnil-summary{display:flex;gap:18px;flex-wrap:wrap;padding:9px 14px;background:#171717;font-size:12px;border-bottom:2px solid #080808;text-transform:uppercase}#rbnil-summary b,.rbnil-value{color:#f4d35e}",
+            "#rbnil-tabs{display:flex;gap:3px;padding:8px 10px 0;background:#292929;flex-wrap:wrap}.rbnil-tab{background:#484848;color:#fff;border:2px solid #111;padding:7px 10px;font-weight:bold;cursor:pointer}.rbnil-tab.active{background:#e3c64e;color:#171717;box-shadow:inset 0 -3px 0 #9e852d}",
+            "#rbnil-tools{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:#242424;border-top:2px solid #111}#rbnil-tools button{background:#555;color:white;border:2px solid #111;padding:6px 9px;cursor:pointer;font-weight:bold}",
+            "#rbnil-list{padding:10px;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(225px,1fr));gap:8px;align-content:start}",
+            ".rbnil-player{background:#303030;border:2px solid #111;padding:9px;min-height:100px;box-shadow:inset 0 0 0 1px #666}.rbnil-row{display:flex;justify-content:space-between;align-items:center;gap:8px}.rbnil-name{font-weight:800;font-size:14px}.rbnil-rating{color:#f4d35e;font-weight:bold}.rbnil-meta{color:#c1c1c1;font-size:11px;margin:5px 0}.rbnil-stats{display:flex;gap:8px;flex-wrap:wrap;color:#e0e0e0;font-size:10px;margin-bottom:8px}.rbnil-sign{background:#e3c64e;color:#171717;border:2px solid #111;padding:6px 9px;font-weight:900;cursor:pointer;text-transform:uppercase}",
+            "#rbnil-empty{grid-column:1/-1;text-align:center;padding:45px;color:#c5c5c5}#rbnil-foot{padding:7px 12px;background:#171717;color:#aaa;font-size:10px;border-top:2px solid #080808}",
+            "@media(max-width:650px){#rbnil-summary{gap:7px;font-size:10px}.rbnil-tab{padding:6px 8px}#rbnil-title{font-size:17px}}"
         ].join("\n");
         el("style", { id: "rbnil-css", text: css }, document.head);
     }
@@ -275,15 +319,21 @@
         next.__rbnilWrapped = true;
         window[name] = next;
     }
+    wrap("gml_Object_obj_frontoffice_Create_0", original => function (inst, other) {
+        const result = original.apply(this, arguments);
+        addFrontOfficeUI(inst, other);
+        return result;
+    });
     wrap("gml_Script_s_college_admissions_check_trigger", original => function (inst, other) {
         M.caller = other;
         M.game = inst || main();
         if (college() && Number(M.game.gmlweek) === 1 && Number(M.game.gmlcollege_admissions_draft_round) > 0) {
             if (!M.cap || M.year !== Number(M.game.gmlyear)) resetBudget();
             if (!M.generated || M.year !== Number(M.game.gmlyear)) generateInitial();
-            // Consume the stock admissions trigger so it does not reopen/rebuild every step.
+            // Consume the stock admissions trigger. The portal is now opened
+            // from the native Athletics Office button instead of a browser popup.
             M.game.gmlcollege_admissions_draft_round = 0;
-            open();
+            updateOfficeDisplay();
             return true;
         }
         return original.apply(this, arguments);
@@ -325,5 +375,5 @@
         }
         if (event.key === "Escape" && M.active) close();
     });
-    log("Loaded NIL / Transfer Portal mod v" + M.version);
+    log("Loaded NIL / Transfer Portal mod v" + M.version + " (native Athletics Office integration)");
 })();
