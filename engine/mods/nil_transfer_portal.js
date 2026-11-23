@@ -366,7 +366,7 @@
         root.style.cssText=[
             "position:fixed","z-index:2147483000","display:flex","flex-direction:column",
             "align-items:stretch","gap:4px","width:154px","padding:7px",
-            "background:#263b30","border:2px solid #e5d6a7","border-radius:2px",
+            "background:#05326E","border:2px solid #FFFFFF","border-radius:2px",
             "box-shadow:3px 3px 0 rgba(0,0,0,.65),inset 0 0 0 1px #71866b",
             "font-family:'Trebuchet MS',Arial,sans-serif","pointer-events:auto",
             "box-sizing:border-box"
@@ -375,7 +375,7 @@
         const label=document.createElement("div");
         label.textContent="FILTER BY POSITION";
         label.style.cssText=[
-            "color:#e5d6a7","font-size:10px","font-weight:900",
+            "color:#FFFFFF","font-size:10px","font-weight:900",
             "letter-spacing:1px","line-height:13px","text-align:left",
             "text-shadow:1px 1px #111"
         ].join(";");
@@ -388,8 +388,8 @@
         trigger.style.cssText=[
             "display:flex","align-items:center","justify-content:space-between",
             "width:100%","min-height:31px","padding:5px 8px",
-            "border:2px solid #e5d6a7","border-radius:1px",
-            "background:#405b43","color:#fff1c9",
+            "border:2px solid #FFFFFF","border-radius:1px",
+            "background:#05326E","color:#FFFFFF",
             "font:900 13px 'Trebuchet MS',Arial,sans-serif",
             "letter-spacing:.5px","text-align:left","text-shadow:1px 1px #17251b",
             "cursor:pointer","box-shadow:inset 0 -2px rgba(0,0,0,.2)"
@@ -399,7 +399,7 @@
         value.textContent=POSITION_FILTERS[M.positionFilterIndex||0].label;
         const arrow=document.createElement("span");
         arrow.textContent="▼";
-        arrow.style.cssText="color:#f2d77d;font-size:10px;margin-left:8px";
+        arrow.style.cssText="color:#FFFFFF;font-size:10px;margin-left:8px";
         trigger.appendChild(value);
         trigger.appendChild(arrow);
 
@@ -409,7 +409,7 @@
         menu.style.cssText=[
             "display:none","position:absolute","top:calc(100% + 4px)",
             "left:7px","right:7px","padding:3px",
-            "background:#263b30","border:2px solid #e5d6a7",
+            "background:#05326E","border:2px solid #FFFFFF",
             "box-shadow:3px 3px 0 rgba(0,0,0,.65)",
             "max-height:260px","overflow-y:auto"
         ].join(";");
@@ -422,18 +422,18 @@
             option.style.cssText=[
                 "display:block","width:100%","padding:6px 8px",
                 "border:0","border-bottom:1px solid rgba(229,214,167,.22)",
-                "background:"+(index===(M.positionFilterIndex||0)?"#d8c477":"transparent"),
-                "color:"+(index===(M.positionFilterIndex||0)?"#263b30":"#f4e9c9"),
+                "background:"+(index===(M.positionFilterIndex||0)?"#FFFFFF":"transparent"),
+                "color:"+(index===(M.positionFilterIndex||0)?"#05326E":"#FFFFFF"),
                 "font:900 12px 'Trebuchet MS',Arial,sans-serif",
                 "letter-spacing:.6px","text-align:left","cursor:pointer"
             ].join(";");
             option.addEventListener("mouseenter",()=>{
-                if(index!==(M.positionFilterIndex||0))option.style.background="#405b43";
-                if(index!==(M.positionFilterIndex||0))option.style.color="#fff1c9";
+                if(index!==(M.positionFilterIndex||0))option.style.background="#05326E";
+                if(index!==(M.positionFilterIndex||0))option.style.color="#FFFFFF";
             });
             option.addEventListener("mouseleave",()=>{
-                option.style.background=index===(M.positionFilterIndex||0)?"#d8c477":"transparent";
-                option.style.color=index===(M.positionFilterIndex||0)?"#263b30":"#f4e9c9";
+                option.style.background=index===(M.positionFilterIndex||0)?"#FFFFFF":"transparent";
+                option.style.color=index===(M.positionFilterIndex||0)?"#05326E":"#FFFFFF";
             });
             option.addEventListener("click",()=>rbNilSetPositionFilter(index));
             menu.appendChild(option);
