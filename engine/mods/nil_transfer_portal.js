@@ -183,7 +183,7 @@
             ".rbnil-player{background:#262d31;border:1px solid #59646a;padding:11px;min-height:105px}.rbnil-row{display:flex;justify-content:space-between;align-items:center;gap:8px}.rbnil-name{font-weight:800;font-size:15px}.rbnil-rating{color:#f5d76e;font-weight:bold}.rbnil-meta{color:#aab5ba;font-size:12px;margin:6px 0}.rbnil-stats{display:flex;gap:8px;flex-wrap:wrap;color:#d1d8dc;font-size:11px;margin-bottom:10px}.rbnil-sign{background:#e2c65b;border:0;padding:7px 10px;font-weight:900;cursor:pointer}",
             "#rbnil-empty{grid-column:1/-1;text-align:center;padding:45px;color:#b8c0c4}#rbnil-foot{padding:8px 14px;background:#101315;color:#9ca8ad;font-size:11px}",
             "@media(max-width:650px){#rbnil-summary{gap:8px;font-size:11px}.rbnil-tab{padding:7px 9px}#rbnil-title{font-size:18px}}"
-        ].join("\\n");
+        ].join("\n");
         el("style", { id: "rbnil-css", text: css }, document.head);
     }
     function close() {
