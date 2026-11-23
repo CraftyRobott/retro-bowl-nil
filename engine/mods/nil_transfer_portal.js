@@ -1,12 +1,12 @@
 // @name Retro Bowl College NIL + Transfer Admissions
 // @description Converts the native Scholarship Fund into the NIL budget and expands native admissions with transfer candidates.
-// @version 0.5.6
+// @version 0.5.7
 (function () {
     "use strict";
     if (window.__RBNIL_LOADED__) return;
     window.__RBNIL_LOADED__ = true;
 
-    const M = window.RBNIL = { version: "0.5.6", game: null, caller: null, inProfileDraw: false, economyVersion: 0 };
+    const M = window.RBNIL = { version: "0.5.7", game: null, caller: null, inProfileDraw: false, economyVersion: 0 };
     const POSITIONS = [1,2,3,4,5,6,7,8,9,10];
     const TRANSFER_COUNTS = [5,5,7,4,7,6,5,8,2,1];
     const log = (...a) => console.log("[RB NIL]", ...a);
@@ -94,6 +94,41 @@
         set(player,"rc_cost",value);
         return value;
     }
+
+    // The native star sprite has 11 frames (rating 0-10): ratings 9-10 are
+    // five-star recruits and 7-8 are four-star recruits. Thin only the top
+    // current-rating tiers; do not fake the star label or touch potential stats.
+    // The native rating function reads stamina/speed/strength/skill, so lowering
+    // those real attributes changes the recruit's actual rating and price.
+    function reduceRecruitToThreeStars(player) {
+        const attrs=["stamina","speed","strength","skill"];
+        let guard=0;
+        while(rating(player)>6 && guard++<40) {
+            const available=attrs.filter(k=>(Number(get(player,k))||0)>1);
+            if(!available.length)break;
+            const key=available[Math.floor(Math.random()*available.length)];
+            set(player,key,(Number(get(player,key))||1)-1);
+        }
+    }
+    function normalizeRecruitPool(list) {
+        const before={five:0,four:0};
+        const after={five:0,four:0};
+        for(let i=0;i<ds_list_size(list);i++) {
+            const p=ds_list_find_value(list,i);
+            const r=rating(p);
+            if(r>=9) {
+                before.five++;
+                if(Math.random()<0.65)reduceRecruitToThreeStars(p);
+            } else if(r>=7) {
+                before.four++;
+                if(Math.random()<0.45)reduceRecruitToThreeStars(p);
+            }
+            const adjusted=rating(p);
+            if(adjusted>=9)after.five++;
+            else if(adjusted>=7)after.four++;
+        }
+        log("Recruit rarity pass (five/four-star ratings)",before.five+"/"+before.four,"->",after.five+"/"+after.four);
+    }
     function refreshCandidateCosts() {
         const list=M.game&&M.game.gmldraftlist;
         if(!list)return;
@@ -105,7 +140,6 @@
     function addTransferCandidates() {
         const list=M.game&&M.game.gmldraftlist;
         if(!list)return;
-        for(let i=0;i<ds_list_size(list);i++) priceCandidate(ds_list_find_value(list,i));
         for(let pi=0;pi<POSITIONS.length;pi++) {
             const pos=POSITIONS[pi];
             for(let n=0;n<TRANSFER_COUNTS[pi];n++) {
@@ -115,10 +149,12 @@
                     if(!p||typeof p!=="number")continue;
                     window.gml_Script_s_college_correct_new_player(M.game,M.caller,p);
                     set(p,"age",age); set(p,"teamid",-1); set(p,"signed_year",-1);
-                    set(p,"rbnil_class_year",age-18); priceCandidate(p); ds_list_add(list,p);
+                    set(p,"rbnil_class_year",age-18); ds_list_add(list,p);
                 } catch(e) { warn("Could not generate transfer candidate",{position:pos,age,error:e}); }
             }
         }
+        normalizeRecruitPool(list);
+        for(let i=0;i<ds_list_size(list);i++)priceCandidate(ds_list_find_value(list,i));
         try { M.game.gmldraftlist=window.gml_Script_s_sort_players(M.game,M.caller,list,2); }
         catch(e) { warn("Native admissions sorting failed; retaining appended order",e); }
         log("Expanded native admissions pool",ds_list_size(M.game.gmldraftlist),"players (50 freshmen + up to 50 transfers)");
