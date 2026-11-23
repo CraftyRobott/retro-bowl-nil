@@ -152,7 +152,8 @@
         if (!p) return;
         const value = Number(mapGet(p, "nil_value")) || 0;
         if (value > M.budget) return alert("Not enough NIL budget for this annual deal.");
-        if (roster().length >= 12) return alert("Your roster is full. Make room before signing a transfer.");
+        const rosterCap = Number(window.gml_Script_s_get_roster_cap(M.game, M.caller)) || 10;
+        if (roster().length >= rosterCap) return alert("Your roster is full. Make room before signing a transfer.");
         mapSet(p, "teamid", Number(M.game.gmlmyteam_id));
         mapSet(p, "signed_year", Number(M.game.gmlyear));
         mapSet(p, "contract", 8);
