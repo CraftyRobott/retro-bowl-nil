@@ -413,8 +413,18 @@
             M.draftFilterButton=null;
         }
         const select=rbNilPositionDropdown();
+        const wrap=document.getElementById("rbnil-position-filter-wrap");
+        if(wrap)wrap.style.display="flex";
         if(select)select.value=String(M.positionFilterIndex||0);
     }
+    function rbNilHidePositionDropdown() {
+        const wrap=document.getElementById("rbnil-position-filter-wrap");
+        if(wrap)wrap.style.display="none";
+    }
+    wrap("room_goto",original=>function() {
+        rbNilHidePositionDropdown();
+        return original.apply(this,arguments);
+    });
     function rbNilUpdateDraftPage(draft,other) {
         setContext(draft,other);
         M.draftInst=draft;
