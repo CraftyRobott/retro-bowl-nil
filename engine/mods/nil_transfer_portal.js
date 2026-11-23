@@ -154,7 +154,7 @@
         const cap=nativeFundCap();
         M.game.gmlrecruitment_credits=cap;
         M.game.gmlrc_season_earned=0; M.game.gmlrc_season_spent=0;
-        M.economyVersion=1;
+        M.economyVersion=2;
         log("Annual native NIL budget refreshed",money(cap),"year",M.game.gmlyear);
     }
     function wrap(name,factory) {
@@ -180,7 +180,7 @@
     wrap("gml_Script_recruitment_credits_button_click_boost",original=>function(inst,other) {
         setContext(inst,other);
         if(!isCollege())return original.apply(this,arguments);
-        const next=nativeFundCap()+3, canBuy=Number(M.game.gmlcoach_credit)>=100;
+        const next=nativeFundCap()+3000, canBuy=Number(M.game.gmlcoach_credit)>=100;
         const msg=canBuy
             ?"Increase your NIL budget cap to "+money(next)+" for 100 Coaching Credits?"
             :"You need 100 Coaching Credits to increase your NIL budget cap to "+money(next)+".";
