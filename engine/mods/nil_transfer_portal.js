@@ -1,12 +1,12 @@
 // @name Retro Bowl College NIL + Transfer Admissions
 // @description Converts the native Scholarship Fund into the NIL budget and expands native admissions with transfer candidates.
-// @version 0.5.0
+// @version 0.5.1
 (function () {
     "use strict";
     if (window.__RBNIL_LOADED__) return;
     window.__RBNIL_LOADED__ = true;
 
-    const M = window.RBNIL = { version: "0.5.0", game: null, caller: null, inProfileDraw: false, economyVersion: 0 };
+    const M = window.RBNIL = { version: "0.5.1", game: null, caller: null, inProfileDraw: false, economyVersion: 0 };
     const POSITIONS = [1,2,3,4,5,6,7,8,9,10];
     const TRANSFER_COUNTS = [5,5,7,4,7,6,5,8,2,1];
     const log = (...a) => console.log("[RB NIL]", ...a);
@@ -260,12 +260,21 @@
         try { return original.apply(this,arguments); }
         finally { M.inProfileDraw=false; }
     });
+    function formatCandidatePriceText(value) {
+        if(!M.inProfileDraw||typeof value!=="string")return value;
+        // The base game builds this as "$" + rc_cost + "K". rc_cost stays
+        // in native $1K units for affordability/signing, but the label is $M.
+        const match=value.match(/^\$(\d+(?:\.\d+)?)(?:K|M(?:\/YR)?)$/);
+        if(!match)return value;
+        const amount=Number(match[1]);
+        if(!Number.isFinite(amount))return value;
+        return "$"+(amount/1000).toFixed(2)+"M";
+    }
     wrap("gml_Script_draw_hd_text",original=>function(inst,other,x,y,value) {
-        if(M.inProfileDraw&&typeof value==="string") {
-            const match=value.match(/^\$(\d+(?:\.\d+)?)M\/YR$/);
-            if(match)value="$"+(Number(match[1])/1000).toFixed(2)+"M/YR";
-        }
-        return original.call(this,inst,other,x,y,value);
+        return original.call(this,inst,other,x,y,formatCandidatePriceText(value));
+    });
+    wrap("gml_Script_draw_hd_text_color",original=>function(inst,other,x,y,value) {
+        return original.call(this,inst,other,x,y,formatCandidatePriceText(value),...Array.prototype.slice.call(arguments,5));
     });
 
     // Keep the portal pool stable between picks.
