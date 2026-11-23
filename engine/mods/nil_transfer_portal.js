@@ -1,12 +1,12 @@
 // @name Retro Bowl College NIL + Transfer Admissions
 // @description Converts the native Scholarship Fund into the NIL budget and expands native admissions with transfer candidates.
-// @version 0.5.4
+// @version 0.5.6
 (function () {
     "use strict";
     if (window.__RBNIL_LOADED__) return;
     window.__RBNIL_LOADED__ = true;
 
-    const M = window.RBNIL = { version: "0.5.5", game: null, caller: null, inProfileDraw: false, economyVersion: 0 };
+    const M = window.RBNIL = { version: "0.5.6", game: null, caller: null, inProfileDraw: false, economyVersion: 0 };
     const POSITIONS = [1,2,3,4,5,6,7,8,9,10];
     const TRANSFER_COUNTS = [5,5,7,4,7,6,5,8,2,1];
     const log = (...a) => console.log("[RB NIL]", ...a);
@@ -268,7 +268,7 @@
         // once as "NIL BUDGET <balance>K / <cap>K". Convert it at the final text
         // helper so the visible widget is correct even though its event callback
         // was registered before this mod loaded.
-        if(isCollege()&&typeof value==="string"&&/^NIL BUDGET(?:\\s|$)/i.test(value)) {
+        if(isCollege()&&typeof value==="string"&&/^NIL BUDGET(?:\s|$)/i.test(value)) {
             value="NIL BUDGET "+money(M.game.gmlrecruitment_credits)+" / "+money(nativeFundCap());
         } else {
             value=formatCandidatePriceText(value);
